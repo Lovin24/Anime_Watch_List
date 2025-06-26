@@ -1,5 +1,5 @@
 const Anime = require("../models/Anime");
-const getAnimeRecommendation = require("../services/geminiService");
+const { getAnimeRecommendation } = require("../services/geminiService");
 const { fetchAnimeByTitle } = require("../services/jikanService");
 
 // Get user's anime watchlist
@@ -163,7 +163,6 @@ Format your response as a JSON array with this structure:
 Make sure each recommendation is different and tailored to their specific tastes. Only return the JSON array, no additional text.`;
 
     let recommendations;
-
     try {
       // Call Gemini API using the new service
       const responseText = await getAnimeRecommendation(prompt);
@@ -308,6 +307,50 @@ Make sure each recommendation is different and tailored to their specific tastes
     }
 
     // After recommendations are generated, enrich with images from Jikan
+    const fallbackAnimeData = {
+      "One Punch Man": {
+        mal_id: 30276,
+        image: "https://cdn.myanimelist.net/images/anime/12/76049.jpg",
+      },
+      "Attack on Titan": {
+        mal_id: 16498,
+        image: "https://cdn.myanimelist.net/images/anime/10/47347.jpg",
+      },
+      "Death Note": {
+        mal_id: 1535,
+        image: "https://cdn.myanimelist.net/images/anime/9/9453.jpg",
+      },
+      "Fullmetal Alchemist: Brotherhood": {
+        mal_id: 5114,
+        image: "https://cdn.myanimelist.net/images/anime/1223/96541.jpg",
+      },
+      "Demon Slayer": {
+        mal_id: 38000,
+        image: "https://cdn.myanimelist.net/images/anime/1286/99889.jpg",
+      },
+      "My Hero Academia": {
+        mal_id: 31964,
+        image: "https://cdn.myanimelist.net/images/anime/10/78745.jpg",
+      },
+      "Hunter x Hunter": {
+        mal_id: 11061,
+        image: "https://cdn.myanimelist.net/images/anime/1337/99013.jpg",
+      },
+      "Steins;Gate": {
+        mal_id: 9253,
+        image: "https://cdn.myanimelist.net/images/anime/5/73199.jpg",
+      },
+      "Code Geass": {
+        mal_id: 1575,
+        image: "https://cdn.myanimelist.net/images/anime/4/9391.jpg",
+      },
+      Parasyte: {
+        mal_id: 22535,
+        image: "https://cdn.myanimelist.net/images/anime/3/73178.jpg",
+      },
+      // Add more as needed
+    };
+
     const enrichedRecommendations = await Promise.all(
       recommendations.map(async (rec) => {
         let image = null;
@@ -329,6 +372,13 @@ Make sure each recommendation is different and tailored to their specific tastes
         } catch (e) {
           image = null;
           mal_id = null;
+        }
+        // Fallback mapping for popular anime
+        if (!mal_id && fallbackAnimeData[rec.title]) {
+          mal_id = fallbackAnimeData[rec.title].mal_id;
+        }
+        if (!image && fallbackAnimeData[rec.title]) {
+          image = fallbackAnimeData[rec.title].image;
         }
         return { ...rec, image, mal_id };
       })

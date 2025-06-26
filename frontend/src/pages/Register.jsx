@@ -4,7 +4,7 @@ import axios from "../services/axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
-import Logo from "../assets/logo.jpg";
+import Logo from "../assets/logo.png";
 
 function Register() {
   const { login } = useAuth();
@@ -45,9 +45,16 @@ function Register() {
       <div className="w-full max-w-md">
         {/* Logo and Header */}
         <div className="text-center mb-8">
-          <span className="text-logo text-3xl md:text-4xl block mb-4">
-            AnimeWatchList
-          </span>
+          <div className="flex flex-col items-center mb-2">
+            <img
+              src={Logo}
+              alt="Logo"
+              className="h-16 w-16 object-contain rounded-full mb-2"
+            />
+            <span className="text-logo text-3xl md:text-4xl block">
+              AnimeWatchList
+            </span>
+          </div>
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
             Create Account
           </h1>

@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Logo from "../assets/logo.png";
 
 function Navbar() {
   const { user, logout } = useAuth();
@@ -19,7 +20,11 @@ function Navbar() {
         {/* Left Section */}
         <div className="flex items-center gap-4">
           <Link to="/" className="flex items-center gap-2">
-            {/* Text-based logo */}
+            <img
+              src={Logo}
+              alt="Logo"
+              className="h-10 w-10 object-contain rounded-full"
+            />
             <span className="text-yellow-400 text-2xl font-extrabold tracking-wide font-poppins hover:text-yellow-300 transition">
               AnimeWatchList
             </span>

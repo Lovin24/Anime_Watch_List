@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "../services/axios";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -9,6 +9,8 @@ function Recommendations() {
   const [loading, setLoading] = useState(true);
   const [userPreferences, setUserPreferences] = useState(null);
   const { token } = useAuth();
+  const navigate = useNavigate();
+  const [selectedRec, setSelectedRec] = useState(null);
 
   useEffect(() => {
     fetchRecommendations();
@@ -181,26 +183,46 @@ function Recommendations() {
 
         {/* Recommendations List */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {recommendations.map((rec) => (
-            <div key={rec.mal_id} className="card flex gap-6 items-center">
-              <img
-                src={rec.image}
-                alt={rec.title}
-                className="w-28 h-40 object-cover rounded-xl shadow-lg border-2 border-[#ffd700]/20"
-              />
+          {recommendations.map((rec, idx) => (
+            <div
+              key={rec.mal_id || rec.title || idx}
+              className="card flex gap-6 items-center"
+            >
+              {rec.image ? (
+                <img
+                  src={rec.image}
+                  alt={rec.title}
+                  className="w-28 h-40 object-cover rounded-xl shadow-lg border-2 border-[#ffd700]/20"
+                />
+              ) : (
+                <div className="w-28 h-40 flex items-center justify-center bg-gray-800 text-gray-500 rounded-xl shadow-lg border-2 border-[#ffd700]/20 text-center text-xs p-2">
+                  No Image Available
+                </div>
+              )}
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-logo mb-2">
                   {rec.title}
                 </h2>
                 <p className="text-gray-300 mb-2 line-clamp-3">
-                  {rec.synopsis}
+                  {rec.synopsis || rec.description}
                 </p>
-                <Link
-                  to={rec.mal_id ? `/anime/${rec.mal_id}` : "#"}
+                {rec.personalizedReason && (
+                  <p className="text-yellow-400 italic mb-2">
+                    {rec.personalizedReason}
+                  </p>
+                )}
+                <button
                   className="btn-primary px-4 py-2 text-sm mt-2 inline-block"
+                  onClick={() => {
+                    if (rec.mal_id) {
+                      navigate(`/anime/${rec.mal_id}`);
+                    } else {
+                      navigate(`/search?q=${encodeURIComponent(rec.title)}`);
+                    }
+                  }}
                 >
                   View Details
-                </Link>
+                </button>
               </div>
             </div>
           ))}
