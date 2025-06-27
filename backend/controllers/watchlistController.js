@@ -27,6 +27,23 @@ const addToWatchlist = async (req, res) => {
         .json({ success: false, message: "Anime already in watchlist" });
     }
 
+    // Fetch total episodes and mal_id from Jikan API
+    let episodes = 0;
+    let mal_id = null;
+    try {
+      const animeData = await fetchAnimeByTitle(title);
+      if (animeData) {
+        if (animeData.episodes) {
+          episodes = animeData.episodes;
+        }
+        if (animeData.mal_id) {
+          mal_id = animeData.mal_id;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch data from Jikan API", err);
+    }
+
     const newEntry = new Anime({
       user: req.user._id,
       animeId,
@@ -34,6 +51,9 @@ const addToWatchlist = async (req, res) => {
       image,
       status,
       score,
+      episodes,
+      episodesWatched: 0,
+      mal_id,
     });
 
     await newEntry.save();
@@ -144,7 +164,7 @@ Please recommend 5 diverse anime that would be perfect for this user. Consider t
 
 For each recommendation, provide:
 1. The exact anime title
-2. A detailed explanation of why this anime would appeal to them based on their specific watchlist and preferences (3-4 sentences)
+2. A SHORT explanation (1-2 sentences) of why this anime would appeal to them based on their specific watchlist and preferences
 3. The anime type (TV, Movie, OVA, etc.)
 4. A brief description (1-2 sentences)
 5. A specific reason tied to their watchlist (e.g., "If you enjoyed X, you'll love this because...")
@@ -153,7 +173,7 @@ Format your response as a JSON array with this structure:
 [
   {
     "title": "Anime Title",
-    "reason": "Detailed explanation of why this anime would appeal to the user based on their specific watchlist and preferences",
+    "reason": "Short explanation of why this anime would appeal to the user based on their specific watchlist and preferences",
     "type": "TV/Movie/OVA",
     "description": "Brief description of the anime",
     "personalizedReason": "Specific reason tied to their watchlist preferences"

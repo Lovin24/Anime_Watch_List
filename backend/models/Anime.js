@@ -29,6 +29,18 @@ const animeSchema = new mongoose.Schema(
       min: 0,
       max: 10,
     },
+    episodes: {
+      type: Number,
+      default: 0,
+    },
+    episodesWatched: {
+      type: Number,
+      default: 0,
+    },
+    mal_id: {
+      type: Number,
+      required: false,
+    },
   },
   { timestamps: true }
 );

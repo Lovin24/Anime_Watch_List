@@ -11,11 +11,16 @@ function AnimeDetails() {
   const [anime, setAnime] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showTrailer, setShowTrailer] = useState(false);
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   // Comments state
   const [comments, setComments] = useState([]);
   const [commentInput, setCommentInput] = useState("");
   const [commentsLoading, setCommentsLoading] = useState(true);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyInput, setReplyInput] = useState("");
+  const [upvoting, setUpvoting] = useState({});
+  const [visibleCount, setVisibleCount] = useState(5);
+  const [visibleReplies, setVisibleReplies] = useState({});
 
   useEffect(() => {
     fetchAnimeDetails();
@@ -82,6 +87,231 @@ function AnimeDetails() {
       console.error("Add failed:", err);
       toast.error("Failed to add to watchlist");
     }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await axios.delete(`/comments/${commentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setComments((prev) => prev.filter((c) => c._id !== commentId));
+      toast.success("Comment deleted");
+    } catch {
+      toast.error("Failed to delete comment");
+    }
+  };
+
+  const handleReply = (parentId) => {
+    setReplyingTo(parentId);
+    setReplyInput("");
+  };
+
+  const handleAddReply = async (e, parentId) => {
+    e.preventDefault();
+    if (!replyInput.trim()) return;
+    try {
+      const res = await axios.post(
+        `/comments/${id}`,
+        { content: replyInput, parentComment: parentId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setComments([res.data, ...comments]);
+      setReplyInput("");
+      setReplyingTo(null);
+      toast.success("Reply added!");
+    } catch {
+      toast.error("Failed to add reply");
+    }
+  };
+
+  const handleUpvote = async (commentId, hasUpvoted) => {
+    setUpvoting((prev) => ({ ...prev, [commentId]: true }));
+    try {
+      if (!hasUpvoted) {
+        const res = await axios.post(
+          `/comments/upvote/${commentId}`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setComments((prev) =>
+          prev.map((c) =>
+            c._id === commentId
+              ? {
+                  ...c,
+                  upvotes: res.data.upvotes,
+                  upvotedBy: [...(c.upvotedBy || []), user.id],
+                }
+              : c
+          )
+        );
+      } else {
+        const res = await axios.post(
+          `/comments/unupvote/${commentId}`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setComments((prev) =>
+          prev.map((c) =>
+            c._id === commentId
+              ? {
+                  ...c,
+                  upvotes: res.data.upvotes,
+                  upvotedBy: (c.upvotedBy || []).filter(
+                    (uid) => uid !== user.id
+                  ),
+                }
+              : c
+          )
+        );
+      }
+    } catch {
+      toast.error("Failed to update upvote");
+    } finally {
+      setUpvoting((prev) => ({ ...prev, [commentId]: false }));
+    }
+  };
+
+  // Helper to nest replies
+  const nestComments = (comments) => {
+    const map = {};
+    comments.forEach((c) => (map[c._id] = { ...c, replies: [] }));
+    const roots = [];
+    comments.forEach((c) => {
+      if (c.parentComment) {
+        if (map[c.parentComment]) map[c.parentComment].replies.push(map[c._id]);
+      } else {
+        roots.push(map[c._id]);
+      }
+    });
+    return roots;
+  };
+
+  const renderComment = (comment, depth = 0) => {
+    const hasUpvoted =
+      comment.upvotedBy && user && comment.upvotedBy.includes(user.id);
+    // Replies pagination
+    const replyCount = visibleReplies[comment._id] || 5;
+    const repliesToShow = comment.replies
+      ? comment.replies.slice(0, replyCount)
+      : [];
+    return (
+      <div
+        key={comment._id}
+        style={{ marginLeft: depth * 32 }}
+        className="bg-gray-700/30 backdrop-blur-sm border border-gray-600/30 rounded-xl p-4 mb-2"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+            {comment.username?.charAt(0).toUpperCase() || "U"}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-semibold text-white">
+                {comment.username || "Unknown User"}
+              </span>
+              <span className="text-xs text-gray-400">
+                {new Date(comment.createdAt).toLocaleDateString()}
+              </span>
+              {/* Delete button for own comments */}
+              {user && comment.user === user.id && (
+                <button
+                  onClick={() => handleDeleteComment(comment._id)}
+                  className="ml-2 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded"
+                >
+                  Delete
+                </button>
+              )}
+              {/* Upvote button */}
+              {token && (
+                <button
+                  onClick={() => handleUpvote(comment._id, hasUpvoted)}
+                  className={`ml-2 px-2 py-1 text-xs rounded flex items-center gap-1 ${
+                    hasUpvoted
+                      ? "bg-yellow-400 text-black"
+                      : "bg-gray-600 text-white hover:bg-yellow-400 hover:text-black"
+                  }`}
+                  disabled={upvoting[comment._id]}
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 15l7-7 7 7"
+                    />
+                  </svg>
+                  {comment.upvotes || 0}
+                </button>
+              )}
+              {/* Reply button */}
+              {token && (
+                <button
+                  onClick={() => handleReply(comment._id)}
+                  className="ml-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
+                >
+                  Reply
+                </button>
+              )}
+            </div>
+            <p className="text-gray-300 leading-relaxed">{comment.content}</p>
+            {/* Reply input */}
+            {replyingTo === comment._id && (
+              <form
+                onSubmit={(e) => handleAddReply(e, comment._id)}
+                className="mt-2 flex gap-2"
+              >
+                <input
+                  type="text"
+                  value={replyInput}
+                  onChange={(e) => setReplyInput(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="Write a reply..."
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+                >
+                  Send
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReplyingTo(null)}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded"
+                >
+                  Cancel
+                </button>
+              </form>
+            )}
+            {/* Render replies with pagination */}
+            {comment.replies && comment.replies.length > 0 && (
+              <div className="mt-2">
+                {repliesToShow.map((reply) => renderComment(reply, depth + 1))}
+                {comment.replies.length > replyCount && (
+                  <div className="text-center mt-2">
+                    <button
+                      onClick={() =>
+                        setVisibleReplies((prev) => ({
+                          ...prev,
+                          [comment._id]: (prev[comment._id] || 5) + 5,
+                        }))
+                      }
+                      className="px-4 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-full text-xs font-semibold"
+                    >
+                      Show more
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const getStatusColor = (status) => {
@@ -474,32 +704,25 @@ function AnimeDetails() {
                     <p className="text-gray-400 mt-2">Loading comments...</p>
                   </div>
                 ) : comments.length > 0 ? (
-                  comments.map((comment) => (
-                    <div
-                      key={comment._id}
-                      className="bg-gray-700/30 backdrop-blur-sm border border-gray-600/30 rounded-xl p-4"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                          {comment.user?.username?.charAt(0).toUpperCase() ||
-                            "U"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-white">
-                              {comment.user?.username || "Unknown User"}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              {new Date(comment.createdAt).toLocaleDateString()}
-                            </span>
+                  (() => {
+                    const roots = nestComments(comments);
+                    const visibleRoots = roots.slice(0, visibleCount);
+                    return (
+                      <>
+                        {visibleRoots.map((comment) => renderComment(comment))}
+                        {roots.length > visibleCount && (
+                          <div className="text-center mt-4">
+                            <button
+                              onClick={() => setVisibleCount((c) => c + 5)}
+                              className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-semibold"
+                            >
+                              Show more
+                            </button>
                           </div>
-                          <p className="text-gray-300 leading-relaxed">
-                            {comment.content}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                        )}
+                      </>
+                    );
+                  })()
                 ) : (
                   <div className="text-center py-8">
                     <div className="w-16 h-16 mx-auto mb-4 bg-gray-700/50 rounded-full flex items-center justify-center">

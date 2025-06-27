@@ -206,10 +206,8 @@ function Recommendations() {
                 <p className="text-gray-300 mb-2 line-clamp-3">
                   {rec.synopsis || rec.description}
                 </p>
-                {rec.personalizedReason && (
-                  <p className="text-yellow-400 italic mb-2">
-                    {rec.personalizedReason}
-                  </p>
+                {rec.reason && (
+                  <p className="text-yellow-400 italic mb-2">{rec.reason}</p>
                 )}
                 <button
                   className="btn-primary px-4 py-2 text-sm mt-2 inline-block"
