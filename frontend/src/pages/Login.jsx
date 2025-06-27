@@ -37,6 +37,13 @@ function Login() {
     }
   };
 
+  const handleTestSignIn = () => {
+    setFormData({ email: "test@gmail.com", password: "test12" });
+    setTimeout(() => {
+      document.getElementById("login-form").requestSubmit();
+    }, 100);
+  };
+
   return (
     <div className="min-h-screen bg-[#181a20] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -53,7 +60,7 @@ function Login() {
 
         {/* Login Form */}
         <div className="card border border-[#23242b] p-8 shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form id="login-form" onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div>
               <label
@@ -119,6 +126,15 @@ function Login() {
               )}
             </button>
           </form>
+
+          {/* Test Sign In Button */}
+          <button
+            type="button"
+            onClick={handleTestSignIn}
+            className="w-full mt-4 py-3 px-6 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-semibold transition-all duration-300"
+          >
+            Test Sign In
+          </button>
 
           {/* Divider */}
           <div className="my-6 flex items-center">
